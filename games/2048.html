@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2048 - Unblocked Games</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            text-align: center;
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .info {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            font-size: 1.1em;
+            color: #333;
+        }
+
+        .score-box, .best-box {
+            background: #f0f0f0;
+            padding: 10px 20px;
+            border-radius: 8px;
+        }
+
+        .score-box span, .best-box span {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(4, 80px);
+            gap: 10px;
+            margin: 30px auto;
+            background: #bbada0;
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .tile {
+            width: 80px;
+            height: 80px;
+            background: #cdc1b4;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            font-weight: bold;
+            color: #776e65;
+        }
+
+        .tile.tile-2 { background: #eee4da; color: #776e65; }
+        .tile.tile-4 { background: #ede0c8; color: #776e65; }
+        .tile.tile-8 { background: #f2b179; color: #f9f6f2; }
+        .tile.tile-16 { background: #f59563; color: #f9f6f2; }
+        .tile.tile-32 { background: #f67c5f; color: #f9f6f2; }
+        .tile.tile-64 { background: #f65e3b; color: #f9f6f2; }
+        .tile.tile-128 { background: #edcf72; color: #095f6b; font-size: 1.5em; }
+        .tile.tile-256 { background: #edcc61; color: #095f6b; font-size: 1.5em; }
+        .tile.tile-512 { background: #edc850; color: #095f6b; font-size: 1.5em; }
+        .tile.tile-1024 { background: #edc53f; color: #095f6b; font-size: 1.3em; }
+        .tile.tile-2048 { background: #edc22e; color: #095f6b; font-size: 1.3em; }
+
+        .instructions {
+            color: #666;
+            margin: 15px 0;
+            font-size: 0.95em;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .reset-btn {
+            background: #667eea;
+            color: white;
+        }
+
+        .reset-btn:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+
+        .home-btn {
+            background: #999;
+            color: white;
+        }
+
+        .home-btn:hover {
+            background: #777;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>🔢 2048</h1>
+        <div class="info">
+            <div class="score-box">Score: <span id="score">0</span></div>
+            <div class="best-box">Best: <span id="best">0</span></div>
+        </div>
+        <div class="board" id="board"></div>
+        <div class="instructions">
+            Use Arrow Keys to move tiles. Combine tiles to reach 2048!
+        </div>
+        <div class="button-group">
+            <button class="reset-btn" onclick="resetGame()">New Game</button>
+            <button class="home-btn" onclick="window.location.href='../'">Home</button>
+        </div>
+    </div>
+
+    <script>
+        const board = document.getElementById('board');
+        let tiles = Array(16).fill(0);
+        let score = 0;
+        let best = localStorage.getItem('2048-best') || 0;
+        document.getElementById('best').textContent = best;
+
+        function render() {
+            board.innerHTML = '';
+            tiles.forEach(value => {
+                const tile = document.createElement('div');
+                tile.className = 'tile';
+                if (value) {
+                    tile.textContent = value;
+                    tile.classList.add(`tile-${value}`);
+                }
+                board.appendChild(tile);
+            });
+            document.getElementById('score').textContent = score;
+        }
+
+        function addNewTile() {
+            const empty = [];
+            tiles.forEach((val, i) => {
+                if (val === 0) empty.push(i);
+            });
+            if (empty.length) {
+                tiles[empty[Math.floor(Math.random() * empty.length)]] = Math.random() < 0.9 ? 2 : 4;
+            }
+        }
+
+        function move(direction) {
+            let moved = false;
+            const oldTiles = [...tiles];
+
+            if (direction === 'left' || direction === 'right') {
+                for (let row = 0; row < 4; row++) {
+                    let line = tiles.slice(row * 4, (row + 1) * 4);
+                    line = slideAndMerge(line, direction === 'right');
+                    tiles.splice(row * 4, 4, ...line);
+                }
+            } else {
+                for (let col = 0; col < 4; col++) {
+                    let line = [tiles[col], tiles[col + 4], tiles[col + 8], tiles[col + 12]];
+                    line = slideAndMerge(line, direction === 'down');
+                    tiles[col] = line[0];
+                    tiles[col + 4] = line[1];
+                    tiles[col + 8] = line[2];
+                    tiles[col + 12] = line[3];
+                }
+            }
+
+            moved = !oldTiles.every((val, i) => val === tiles[i]);
+            if (moved) {
+                addNewTile();
+                render();
+                checkGameEnd();
+            }
+        }
+
+        function slideAndMerge(line, reverse) {
+            if (reverse) line.reverse();
+            line = line.filter(v => v !== 0);
+            for (let i = 0; i < line.length - 1; i++) {
+                if (line[i] === line[i + 1]) {
+                    line[i] *= 2;
+                    score += line[i];
+                    line.splice(i + 1, 1);
+                }
+            }
+            line.push(...Array(4 - line.length).fill(0));
+            if (reverse) line.reverse();
+            return line;
+        }
+
+        function checkGameEnd() {
+            if (score > best) {
+                best = score;
+                localStorage.setItem('2048-best', best);
+                document.getElementById('best').textContent = best;
+            }
+        }
+
+        function resetGame() {
+            tiles = Array(16).fill(0);
+            score = 0;
+            addNewTile();
+            addNewTile();
+            render();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                e.preventDefault();
+                const directions = {
+                    'ArrowUp': 'up',
+                    'ArrowDown': 'down',
+                    'ArrowLeft': 'left',
+                    'ArrowRight': 'right'
+                };
+                move(directions[e.key]);
+            }
+        });
+
+        resetGame();
+    </script>
+</body>
+</html>
